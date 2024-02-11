@@ -1,32 +1,13 @@
-homeassistant:
-  name: HomeKit Notification Demo
-  latitude: 60.60
-  longitude: 15.62
-  elevation: 123
-  unit_system: metric
-  time_zone: Europe/Stockholm
+#The following .yaml snippets need to be stored in the right .yaml files within your HomeAssistant environment.
 
-config:
-map:
-mobile_app:
+###################################################
+#################configuration.yaml
+###################################################
 
-lovelace:
-  mode: yaml
-
-  dashboards:
-    homekit-dashboard:
-      mode: yaml
-      title: HomeKit
-      icon: mdi:tablet-dashboard
-      show_in_sidebar: true
-      require_admin: false
-      filename: ui-homekit.yaml
-
-# ---------------------------------------------------------------------------------------
 camera:
-  # On first start the config will complain, but this will be sorted out by an automation
+# the generic camera which will be used within Homekit
   - platform: local_file
-    file_path: /config/www/homekit-camera.jpg
+    file_path: /config/www/black.png
     name: "Homekit Notification Camera"
 
 input_boolean:
@@ -47,7 +28,21 @@ binary_sensor:
 
 shell_command:
   # Simple script to link files to the one the camera is pointing at
-  homekit_notification_camera_link_file: 'ln -f -T /config/www/{{ jpgimage }} /config/www/homekit-camera.jpg'
+  homekit_notification_camera_link_file: 'ln -f -T /config/www/{{ jpgimage }} /config/www/black.jpg'
+
+homekit:
+  - name: "Home Assistant Bridge"
+    filter:
+      include_entities:
+        - camera.homekit_notification_camera
+    entity_config:
+      # Link the "DoorBell" to the camera
+      camera.homekit_notification_camera:
+        linked_doorbell_sensor: binary_sensor.homekit_notification_camera_doorbell
+
+###################################################
+#################scripts.yaml
+###################################################
 
 script:
   homekit_notification_camera_trigger:
@@ -56,30 +51,29 @@ script:
       filename:
         description: JPEG-file to show in camera
         example: "someimage.jpg"
-
     sequence:
       # Change the camera image
       - service: shell_command.homekit_notification_camera_link_file
         data_template:
           jpgimage: '{{ filename }}'
-
       # Trigger the "doorbell" (this will trigger the notification in HomeKit)
       - service: input_boolean.turn_on
         target:
           entity_id: input_boolean.homekit_notification_camera_trigger
-
       # Delay 30sec before reset
       - delay: "00:00:30"
-
       # Reset the "doorbell"
       - service: input_boolean.turn_off
         target:
           entity_id: input_boolean.homekit_notification_camera_trigger
-
       # Reset camera image
       - service: shell_command.homekit_notification_camera_link_file
         data_template:
-          jpgimage: 'black.jpg'
+          jpgimage: 'black.png'
+
+###################################################
+#################automations.yaml
+###################################################
 
 automation:
 # This automation sets a black image when starting up
@@ -100,16 +94,4 @@ automation:
   action:
     - service: script.homekit_notification_camera_trigger
       data:
-        filename: dishwasher.jpg
-
-homekit:
-  - name: "Home Assistant Bridge"
-    filter:
-      include_entities:
-        - camera.homekit_notification_camera
-    entity_config:
-      # Link the "DoorBell" to the camera
-      camera.homekit_notification_camera:
-        linked_doorbell_sensor: binary_sensor.homekit_notification_camera_doorbell
-
-# ---------------------------------------------------------------------------------------
+        filename: waschmaschine.png
